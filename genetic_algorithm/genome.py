@@ -62,7 +62,8 @@ class Genome:
         if not np.issubdtype(self.genes.dtype, np.floating):
             # Define a gene_set for discrete values
             if gene_range is None:
-                self.gene_set = tuple(gene_set or set(self.genes))
+                self._gene_set = set(gene_set) if gene_set else set(self.genes)
+                self.gene_set = tuple(self._gene_set)
                 self._continuous = False
                 return
             else:
@@ -121,6 +122,13 @@ class Genome:
                 f'{self.gene_length} != {other.gene_length}.'
             )
 
+        if self._gene_set != other._gene_set:
+            raise ValueError(
+                f'Gene sets of the genomes do not match. '
+                f'Gene set of self: {self._gene_set}. '
+                f'Gene set of other: {other._gene_set}.'
+            )
+
         if crossover_point is not None:
             if not isinstance(crossover_point, int):
                 raise TypeError(
@@ -161,7 +169,7 @@ class Genome:
         """
         if not isinstance(mutation_rate, float):
             raise TypeError(
-                f'mutation_rate must be a float, found type `{type(mutation_rate)}`'
+                f'mutation_rate must be a float between 0 and 1, found type `{type(mutation_rate)}`'
             )
 
         if not 0. <= mutation_rate <= 1.:
