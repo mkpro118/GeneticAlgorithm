@@ -233,7 +233,3 @@ class Genome:
             f'Genome(length={self.gene_length}, gene_set={self.gene_set}, '
             f'genes={self.genes})'
         )
-
-
-if __name__ == '__main__':
-    pass
