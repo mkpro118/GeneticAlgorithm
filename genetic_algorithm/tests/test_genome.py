@@ -11,11 +11,31 @@ class TestGenome(unittest.TestCase):
         self.assertTrue(hasattr(genome, 'gene_set'))
         self.assertFalse(hasattr(genome, 'gene_range'))
 
+    def test_init_invalid_gene_length(self):
+        with self.assertRaises(ValueError):
+            Genome(gene_length=0)
+
+        with self.assertRaises(ValueError):
+            Genome(gene_length=-1)
+
+    def test_init_invalid_gene_length_type(self):
+        with self.assertRaises(TypeError):
+            Genome(gene_length=print)
+
     def test_init_with_genes(self):
         genes = [0, 1, 0, 1, 1, 0, 0, 1]
         genome = Genome(genes=genes)
         self.assertTrue(np.array_equal(genome.genes, np.array(genes)))
         self.assertEqual(genome.gene_length, len(genes))
+
+    def test_init_with_gene_set(self):
+        gene_length = 5
+        gene_set = frozenset({'A', 'B'})
+        genome = Genome(gene_length=gene_length, gene_set=gene_set)
+
+        self.assertEqual(genome.gene_length, gene_length)
+        self.assertEqual(genome._gene_set, gene_set)
+        self.assertTrue(all(gene in gene_set for gene in genome.genes))
 
     def test_init_continuous(self):
         genes = np.array([0.1, 0.5, 0.8])
