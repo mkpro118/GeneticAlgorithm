@@ -247,3 +247,7 @@ class Genome:
             f'Genome(length={self.gene_length}, gene_set={self.gene_set}, '
             f'genes={self.genes})'
         )
+
+
+def combine_gene_set(genome1: Genome, genome2: Genome) -> set:
+    return genome1._gene_set.union(genome2._gene_set)
