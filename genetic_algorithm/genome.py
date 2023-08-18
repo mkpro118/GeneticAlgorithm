@@ -38,11 +38,22 @@ class Genome:
             gene_range (Optional[tuple[float, float]]): The range of real-valued gene values (optional).
             random_state (Optional[int]): Seed for the random number generator (optional).
         """
+        if not isinstance(gene_length, int):
+            raise TypeError(
+                f'`gene_length` must be an integer, found type `{type(gene_length)=}`.'
+            )
+        if gene_length <= 0:
+            raise ValueError(
+                f'`gene_length` must be a positive number, found `{gene_length=}`.'
+            )
         self._rng = np.random.default_rng(seed=random_state)
 
         if genes is not None:
             self.genes = np.asarray(genes)
             self.gene_length = len(genes)
+        elif gene_set is not None:
+            self.gene_length = gene_length
+            self.genes = self._rng.choice(tuple(gene_set), size=gene_length)
         else:
             self.gene_length = gene_length
             self.genes = self._rng.integers(0, 2, size=gene_length)
@@ -62,7 +73,11 @@ class Genome:
         if not np.issubdtype(self.genes.dtype, np.floating):
             # Define a gene_set for discrete values
             if gene_range is None:
-                self._gene_set = set(gene_set) if gene_set else set(self.genes)
+                if gene_set:
+                    self._gene_set = frozenset(gene_set)
+                else:
+                    self._gene_set = frozenset(self.genes)
+
                 self.gene_set = tuple(self._gene_set)
                 self._continuous = False
                 return
