@@ -1,7 +1,9 @@
-from typing import Optional, Iterable, Sequence
+from typing import Optional, Iterable, Sequence, Callable
 
 from numpy.typing import NDArray
 import numpy as np
+
+from genetic_algorithm.utils import LazyLoader
 
 
 class Genome:
@@ -22,6 +24,8 @@ class Genome:
             Mutate the genome by altering gene values based on mutation rate and amount.
 
     """
+
+    __lazy_loader = LazyLoader()
 
     def __init__(self, gene_length: int = 16, *,
                  genes: Optional[Sequence | NDArray] = None,
@@ -59,6 +63,9 @@ class Genome:
             self.genes = self._rng.integers(0, 2, size=gene_length)
 
         self._check_gene_set(gene_set, gene_range)
+
+        crossover_module = Genome.__lazy_loader['genetic_algorithm.crossover']
+        self._crossover_methods = crossover_module.methods
 
     def _check_gene_set(self, gene_set: Optional[Iterable],
                         gene_range: Optional[tuple[float, float]]):
@@ -120,53 +127,37 @@ class Genome:
             self.genes, self.gene_range[0], self.gene_range[1])
 
     def crossover(self, other: 'Genome', *,
-                  crossover_point: int | None = None) -> 'Genome':
+                  method: str = 'one_point') -> 'Genome':
         """
         Perform crossover with another genome to create a new genome.
+        #################################################################
+        ###           TODO: Add descriptions to the methods           ###
+        #################################################################
+        Supported crossover methods are:
+            - 'one_point'
+            - 'two_point'
+            - 'uniform'
+            - 'arithmetic'
+            - 'blend'
+            - 'discrete'
+
+        #################################################################
+        ###                          END TODO                         ###
+        #################################################################
 
         Args:
             other (Genome): The other genome to perform crossover with.
-            crossover_point (int | None): The index to perform crossover at, or None for random (default).
+            method (Str)
 
         Returns:
             Genome: A new genome resulting from crossover.
         """
-        if self.gene_length != other.gene_length:
+        try:
+            return self._crossover_methods[method](self, other)
+        except KeyError:
             raise ValueError(
-                f'Genes are not of the same length, '
-                f'{self.gene_length} != {other.gene_length}.'
+                f'`{method=}` is not a recognized crossover function'
             )
-
-        if self._gene_set != other._gene_set:
-            raise ValueError(
-                f'Gene sets of the genomes do not match. '
-                f'Gene set of self: {self._gene_set}. '
-                f'Gene set of other: {other._gene_set}.'
-            )
-
-        if crossover_point is not None:
-            if not isinstance(crossover_point, int):
-                raise TypeError(
-                    'crossover_point must be an integer, '
-                    f'found type `{type(crossover_point)}`'
-                )
-            if not (0 < crossover_point < self.gene_length):
-                raise ValueError(
-                    'Crossover point is not in bounds. '
-                    f'There are `{self.gene_length}` genes, but '
-                    f'crossover point was found to be `{crossover_point}`'
-                )
-        else:
-            # Choose a random crossover point if one is not provided
-            crossover_point = self._rng.integers(1, self.gene_length)
-
-        # Perform crossover by combining genes from both parents at the crossover point
-        # Take the first half from `self`, second half from `other`
-        first_half = self.genes[:crossover_point]
-        second_half = other.genes[crossover_point:]
-        child_genes = np.concatenate((first_half, second_half))
-
-        return Genome(genes=child_genes, gene_set=self.gene_set)
 
     def mutate(self, mutation_rate: float = 0.01, *,
                mutation_amount: Optional[float] = None,
