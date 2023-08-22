@@ -143,7 +143,8 @@ def arithmetic(genome1: Genome, genome2: Genome, *,
 
 
 @kwargs_proxy
-def blend(genome1: Genome, genome2: Genome, range_factor: float) -> Genome:
+def blend(genome1: Genome, genome2: Genome, *,
+          range_factor: Optional[float] = None) -> Genome:
     """
     Perform blend crossover between two genomes.
 
@@ -164,6 +165,8 @@ def blend(genome1: Genome, genome2: Genome, range_factor: float) -> Genome:
         ValueError: If the gene lengths of the genomes are not compatible.
     """
     check_genome_compatibility(genome1, genome2)
+
+    range_factor = range_factor or _rng.uniform(-0.5, 0.5)
 
     # Calculate the absolute gene ranges for each gene in genome1 and genome2.
     gene_ranges = np.abs(genome1 - genome2)
