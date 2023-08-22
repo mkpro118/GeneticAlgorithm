@@ -1,4 +1,4 @@
-from typing import Optional, Iterable, Sequence, Callable
+from typing import Optional, Iterable, Sequence
 
 from numpy.typing import NDArray
 import numpy as np
@@ -35,7 +35,7 @@ class Genome:
         """
         Initialize a Genome instance.
 
-        Args:
+        Parameters:
             gene_length (int): The length of the gene sequence (default is 16).
             genes (Optional[NDArray[int]]): A sequence of gene values (optional).
             gene_set (Optional[Iterable]): A set of possible gene values (optional).
@@ -62,17 +62,17 @@ class Genome:
             self.gene_length = gene_length
             self.genes = self._rng.integers(0, 2, size=gene_length)
 
-        self._check_gene_set(gene_set, gene_range)
+        self._check_gene_set_and_range(gene_set, gene_range)
 
         crossover_module = Genome.__lazy_loader['genetic_algorithm.crossover']
         self._crossover_methods = crossover_module.methods
 
-    def _check_gene_set(self, gene_set: Optional[Iterable],
-                        gene_range: Optional[tuple[float, float]]):
+    def _check_gene_set_and_range(self, gene_set: Optional[Iterable],
+                                  gene_range: Optional[tuple[float, float]]):
         """
         Validate and set the gene_set and gene_range attributes.
 
-        Args:
+        Parameters:
             gene_set (Optional[Iterable]): A set of possible gene values (optional).
             gene_range (Optional[tuple[float, float]]): The range of real-valued gene values (optional).
         """
@@ -102,9 +102,7 @@ class Genome:
                     )
 
         if gene_range is None:
-            raise ValueError(
-                'Real values detected, use `gene_range` to set the range of real values'
-            )
+            gene_range = (np.min(self.genes), np.max(self.genes))
 
         if (_ := len(gene_range)) != 2:
             raise ValueError(
@@ -127,27 +125,41 @@ class Genome:
             self.genes, self.gene_range[0], self.gene_range[1])
 
     def crossover(self, other: 'Genome', *,
-                  method: str = 'one_point') -> 'Genome':
+                  method: str = 'one_point', **kwargs) -> 'Genome':
         """
         Perform crossover with another genome to create a new genome.
-        #################################################################
-        ###           TODO: Add descriptions to the methods           ###
-        #################################################################
+
         Supported crossover methods are:
-            - 'one_point'
-            - 'two_point'
-            - 'uniform'
-            - 'arithmetic'
-            - 'blend'
-            - 'discrete'
+            - 'one_point': (Discrete and Real Values)
+                In this method, a single random crossover point is selected along
+                the genes of the parents. The genetic information from one parent
+                from one parent is taken up to that point, and the rest is taken
+                from the other parent to create the offspring.
 
-        #################################################################
-        ###                          END TODO                         ###
-        #################################################################
+            - 'two_point': (Discrete and Real Values)
+                In this method, a two random crossover points are selected along
+                the genes of the parents. The genetic information from one parent
+                is taken up to the first point, then genes from the other parent
+                are taken upto the second point, and the rest is taken from the
+                first parent again.
 
-        Args:
+            - 'uniform': (Discrete and Real Values)
+                In this method, each bit or gene in the chromosome is chosen from
+                one of the parents with a 50% probability. It's as if each gene
+                is chosen with a coin toss.
+
+            - 'arithmetic': (Real Values only)
+                This method takes a weighted average of corresponding genes from
+                both parents to create offspring genes.
+
+            - 'blend': (Real Values only)
+                This method generates offspring genes within a certain range around
+                the averages of corresponding genes from both parents.
+
+        Parameters:
             other (Genome): The other genome to perform crossover with.
-            method (Str)
+            method (str): The crossover method to use. Default is 'one_point'.
+            kwargs: optional keyword arguments for crossover methods
 
         Returns:
             Genome: A new genome resulting from crossover.
@@ -165,7 +177,7 @@ class Genome:
         """
         Mutate the genome by altering gene values based on mutation rate and amount.
 
-        Args:
+        Parameters:
             mutation_rate (float): Probability of each gene mutating (default is 0.01).
             mutation_amount (Optional[float]): Magnitude of mutation for real-valued genes (optional).
             inplace (bool): Whether to mutate the genome in place (default is True).
@@ -217,7 +229,7 @@ class Genome:
         Apply continuous mutation to the genes.
         Adds random values within [-amount, amount] to the genes selected in mask
 
-        Args:
+        Parameters:
             mask (np.ndarray): Boolean mask indicating genes to be mutated.
             amount (float): Magnitude of mutation for real-valued genes.
 
@@ -231,7 +243,7 @@ class Genome:
         Apply discrete mutation to the genes.
         Selects new gene values randomly from the gene set for the genes selected in mask
 
-        Args:
+        Parameters:
             mask (np.ndarray): Boolean mask indicating genes to be mutated.
 
         Returns:
@@ -249,5 +261,19 @@ class Genome:
         )
 
 
-def combine_gene_set(genome1: Genome, genome2: Genome) -> set:
+def combine_gene_set(genome1: Genome, genome2: Genome) -> frozenset:
+    """
+    Combine gene sets from two genomes.
+
+    This function takes two Genome objects and returns a frozenset containing
+    the combined gene set of both genomes. Gene sets are returned as
+    frozensets to ensure immutability.
+
+    Parameters:
+        genome1 (Genome): The first Genome object containing gene information.
+        genome2 (Genome): The second Genome object containing gene information.
+
+    Returns:
+        frozenset: A frozenset containing the combined gene set from both genomes.
+    """
     return genome1._gene_set.union(genome2._gene_set)
