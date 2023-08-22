@@ -165,7 +165,7 @@ class Genome:
             Genome: A new genome resulting from crossover.
         """
         try:
-            return self._crossover_methods[method](self, other)
+            return self._crossover_methods[method](self, other, **kwargs)
         except KeyError:
             raise ValueError(
                 f'`{method=}` is not a recognized crossover function'
