@@ -3,6 +3,7 @@ from typing import Optional
 import numpy as np
 
 from genetic_algorithm.genome import Genome, combine_gene_set
+from genetic_algorithm.utils import kwargs_proxy
 
 
 _rng = np.random.default_rng()
@@ -23,21 +24,29 @@ def check_genome_compatibility(genome1: Genome, genome2: Genome):
         )
 
 
-def check_crossover_point(crossover_point: int, genome: Genome):
+def check_crossover_point(crossover_point: int, genome: Genome,
+                          genome2: Optional[Genome] = None):
     if not isinstance(crossover_point, int):
         raise TypeError(
             'crossover_point must be an integer, '
             f'found type `{type(crossover_point)}`'
         )
 
-    if not (0 < crossover_point < genome.gene_length):
+    if genome is None:
+        raise ValueError(f'Cannot check crossover point as genome is {None}.')
+
+    genome2 = genome2 or genome
+    length = min(genome.gene_length, genome2.gene_length)
+
+    if not (0 < crossover_point < length):
         raise ValueError(
             'Crossover point is not in bounds. '
-            f'There are `{genome.gene_length}` genes, '
-            f'found `{crossover_point=}`'
+            f'There are `{length}` genes, '
+            f'found `{crossover_point=}`.'
         )
 
 
+@kwargs_proxy
 def one_point(genome1: Genome, genome2: Genome, *,
               crossover_point: Optional[int] = None) -> Genome:
     check_genome_compatibility(genome1, genome2)
@@ -57,6 +66,7 @@ def one_point(genome1: Genome, genome2: Genome, *,
     return Genome(genes=child_genes, gene_set=combine_gene_set(genome1, genome2))
 
 
+@kwargs_proxy
 def two_point(genome1: Genome, genome2: Genome, *,
               crossover_point1: Optional[int],
               crossover_point2: Optional[int]) -> Genome:
@@ -77,9 +87,13 @@ def two_point(genome1: Genome, genome2: Genome, *,
                                          genome2.gene_length)
 
     # Perform crossover by combining genes from both parents at the two crossover points
-    # Take the first third from `genome1`, second third from `genome2` and the last bit from `genome1` again
+    # Take genes upto the first crosover point from `genome1`, then,
     first = genome1.genes[:crossover_point1]
+
+    # Take genes upto the second crossover point from `genome2` then,
     second = genome2.genes[crossover_point1:crossover_point2]
+
+    # Take the remaining genes from `genome1` again
     third = genome1.genes[crossover_point2:]
 
     child_genes = np.concatenate((first, second, third))
@@ -87,6 +101,7 @@ def two_point(genome1: Genome, genome2: Genome, *,
     return Genome(genes=child_genes, gene_set=combine_gene_set(genome1, genome2))
 
 
+@kwargs_proxy
 def uniform(genome1: Genome, genome2: Genome) -> Genome:
     check_genome_compatibility(genome1, genome2)
 
@@ -96,6 +111,7 @@ def uniform(genome1: Genome, genome2: Genome) -> Genome:
     return Genome(genes=child_genes, gene_set=genome1.gene_set)
 
 
+@kwargs_proxy
 def arithmetic(genome1: Genome, genome2: Genome, *, alpha: float = 0.5) -> Genome:
     check_genome_compatibility(genome1, genome2)
 
@@ -111,6 +127,7 @@ def arithmetic(genome1: Genome, genome2: Genome, *, alpha: float = 0.5) -> Genom
     return Genome(genes=child_genes, gene_range=(min_val, max_val))
 
 
+@kwargs_proxy
 def blend(genome1: Genome, genome2: Genome, range_factor: float) -> Genome:
     check_genome_compatibility(genome1, genome2)
 
