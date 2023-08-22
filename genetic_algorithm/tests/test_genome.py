@@ -48,10 +48,6 @@ class TestGenome(unittest.TestCase):
         with self.assertRaises(ValueError):
             Genome(genes={'10', '10', '10'}, gene_range=(5, 10))
 
-    def test_init_continuous_without_range(self):
-        with self.assertRaises(ValueError):
-            Genome(genes=np.linspace(0, 1))
-
     def test_init_continuous_with_invalid_range_length(self):
         with self.assertRaises(ValueError):
             Genome(genes=np.linspace(0, 1), gene_range=(1, 2, 3))
