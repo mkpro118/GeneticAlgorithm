@@ -136,6 +136,11 @@ class Genome:
                 from one parent is taken up to that point, and the rest is taken
                 from the other parent to create the offspring.
 
+                This method accepts one keyword argument:
+                    - crossover_point (int): If provided, this value is used as
+                        the crossover point, instead of a randomly generated value.
+
+
             - 'two_point': (Discrete and Real Values)
                 In this method, a two random crossover points are selected along
                 the genes of the parents. The genetic information from one parent
@@ -143,18 +148,38 @@ class Genome:
                 are taken upto the second point, and the rest is taken from the
                 first parent again.
 
+                This method accepts two keyword arguments:
+                    - crossover_point1 (int): If provided, this value is used as
+                        the first crossover point, instead of a randomly generated value.
+
+                    - crossover_point2 (int): If provided, this value is used as
+                        the second crossover point, instead of a randomly generated value.
+
+
             - 'uniform': (Discrete and Real Values)
                 In this method, each bit or gene in the chromosome is chosen from
                 one of the parents with a 50% probability. It's as if each gene
                 is chosen with a coin toss.
 
+                This method does not accept any keyword arguments.
+
+
             - 'arithmetic': (Real Values only)
                 This method takes a weighted average of corresponding genes from
                 both parents to create offspring genes.
 
+                This method accepts one keyword argument:
+                    - alpha (float): If provided, this value is used as the weight
+                        fraction, instead of a randomly generated value.
+
+
             - 'blend': (Real Values only)
                 This method generates offspring genes within a certain range around
                 the averages of corresponding genes from both parents.
+
+                This method accepts one keyword argument:
+                    - range_factor (float): If provided, this value is used as the
+                        range, instead of a randomly generated value in (-0.5, 0.5).
 
         Parameters:
             other (Genome): The other genome to perform crossover with.
