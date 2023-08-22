@@ -98,21 +98,32 @@ def uniform(genome1: Genome, genome2: Genome) -> Genome:
 
 def arithmetic(genome1: Genome, genome2: Genome, *, alpha: float = 0.5) -> Genome:
     check_genome_compatibility(genome1, genome2)
+
     alpha = genome1._rng.uniform(0, 1)
+
     child_genes = alpha * genome1.genes + (1 - alpha) * genome2.genes
-    child_genes = np.clip(
-        child_genes, genome1.gene_range[0], genome1.gene_range[1])
-    return Genome(genes=child_genes, gene_set=genome1.gene_set)
+
+    min_val = min(genome1.gene_range[0], genome2.gene_range[0])
+    max_val = max(genome1.gene_range[1], genome2.gene_range[1])
+
+    child_genes = np.clip(child_genes, min_val, max_val)
+
+    return Genome(genes=child_genes, gene_range=(min_val, max_val))
 
 
 def blend(genome1: Genome, genome2: Genome, range_factor: float) -> Genome:
     check_genome_compatibility(genome1, genome2)
-    pass
 
+    gene_ranges = np.abs(genome1 - genome2)
 
-def discrete(genome1: Genome, genome2: Genome) -> Genome:
-    check_genome_compatibility(genome1, genome2)
-    pass
+    min_genes = np.minimum(genome1, genome2) - gene_ranges * range_factor
+    max_genes = np.maximum(genome1, genome2) + gene_ranges * range_factor
+
+    child_genes = np.random.uniform(min_genes, max_genes, size=len(genome1))
+
+    min_genes, max_genes = np.min(min_genes), np.max(max_genes)
+
+    return Genome(genes=child_genes, gene_range=(min_genes, max_genes))
 
 
 methods = {
@@ -121,5 +132,4 @@ methods = {
     'uniform': uniform,
     'arithmetic': arithmetic,
     'blend': blend,
-    'discrete': discrete,
 }
