@@ -2,8 +2,17 @@ from typing import Optional
 
 import numpy as np
 
-from genetic_algorithm.genome import Genome, combine_gene_set
-from genetic_algorithm.utils import kwargs_proxy
+from genetic_algorithm.genome import (
+    combine_gene_range,
+    combine_gene_set,
+    Genome,
+)
+
+from genetic_algorithm.utils import (
+    is_int,
+    is_real_valued_array,
+    kwargs_proxy,
+)
 
 
 __all__ = (
@@ -42,7 +51,34 @@ def check_genome_compatibility(genome1: Genome, genome2: Genome):
             f'{genome1.gene_length} != {genome2.gene_length}.'
         )
 
-    if genome1._gene_set != genome2._gene_set:
+    genome1_has_gene_set = hasattr(genome1, 'gene_set')
+    genome2_has_gene_set = hasattr(genome2, 'gene_set')
+
+    discrete_valued_genes = any((
+        genome1_has_gene_set,
+        genome2_has_gene_set,
+    ))
+
+    real_valued_genes = any((
+        is_real_valued_array(genome1.genes) and not genome1_has_gene_set,
+        is_real_valued_array(genome2.genes) and not genome2_has_gene_set,
+    ))
+
+    if real_valued_genes and discrete_valued_genes:
+        raise TypeError(
+            'Gene type mismatch. One genome has Real Values, '
+            'while the other has Discrete Values.'
+        )
+    if real_valued_genes:
+        return
+
+    genome_set_checks = (
+        genome1._gene_set != genome2._gene_set,
+        not genome1._gene_set.issubset(genome2._gene_set),
+        not genome2._gene_set.issubset(genome1._gene_set),
+    )
+
+    if any(genome_set_checks):
         raise ValueError(
             f'Gene sets of the genomes do not match. '
             f'Gene set of genome1: {genome1._gene_set}. '
@@ -73,7 +109,7 @@ def check_crossover_point(crossover_point: int, genome: Genome,
         TypeError: If the crossover point is not an integer.
         ValueError: If the genome is None, or if the crossover point is out of bounds.
     """
-    if not isinstance(crossover_point, int):
+    if not is_int(crossover_point):
         raise TypeError(
             'crossover_point must be an integer, '
             f'found type `{type(crossover_point)}`'
@@ -90,7 +126,7 @@ def check_crossover_point(crossover_point: int, genome: Genome,
     # of the smaller genome.
     length = min(genome.gene_length, genome2.gene_length)
 
-    if not (0 < crossover_point < length):
+    if not (0 <= crossover_point < length):
         raise ValueError(
             'Crossover point is not in bounds. '
             f'There are `{length}` genes, '
@@ -120,12 +156,22 @@ def arithmetic(genome1: Genome, genome2: Genome, *,
         Genome: The child genome resulting from arithmetic crossover.
 
     Raises:
-        ValueError: If the gene lengths of the genomes are not compatible.
+        ValueError: If the genomes are not compatible for crossover.
     """
     check_genome_compatibility(genome1, genome2)
 
-    # Generate a random alpha value between 0 and 1.
-    # Alpha is the weight fraction for a weighted average.
+    is_real1 = is_real_valued_array(genome1.genes)
+    is_real2 = is_real_valued_array(genome2.genes)
+
+    if not all((is_real1, is_real2)):
+        raise ValueError(
+            'Both genomes must have real valued genes for arithmetic crossover. '
+            f'genome1 {"has" if is_real1 else "does not have"} real valued genes, '
+            f'genome2 {"has" if is_real2 else "does not have"} real valued genes.'
+        )
+
+        # Generate a random alpha value between 0 and 1.
+        # Alpha is the weight fraction for a weighted average.
     alpha = alpha or _rng.uniform(0, 1)
 
     # Combine genes using the arithmetic crossover formula with the calculated alpha value.
@@ -133,8 +179,7 @@ def arithmetic(genome1: Genome, genome2: Genome, *,
 
     # Determine the minimum and maximum possible gene values from the parent genomes.
     # This forms the gene range for the child's genome
-    min_val = min(genome1.gene_range[0], genome2.gene_range[0])
-    max_val = max(genome1.gene_range[1], genome2.gene_range[1])
+    min_val, max_val = combine_gene_range(genome1, genome2)
 
     # Clip the child genes to ensure they fall within the valid gene range.
     child_genes = np.clip(child_genes, min_val, max_val)
@@ -166,18 +211,30 @@ def blend(genome1: Genome, genome2: Genome, *,
     """
     check_genome_compatibility(genome1, genome2)
 
+    genes1, genes2 = genome1.genes, genome2.genes
+
+    is_real1 = is_real_valued_array(genes1)
+    is_real2 = is_real_valued_array(genes2)
+
+    if not all((is_real1, is_real2)):
+        raise ValueError(
+            'Both genomes must have real valued genes for arithmetic crossover. '
+            f'genome1 {"has" if is_real1 else "does not have"} real valued genes, '
+            f'genome2 {"has" if is_real2 else "does not have"} real valued genes.'
+        )
+
     range_factor = range_factor or _rng.uniform(-0.5, 0.5)
 
     # Calculate the absolute gene ranges for each gene in genome1 and genome2.
-    gene_ranges = np.abs(genome1 - genome2)
+    gene_ranges = np.abs(genes1 - genes2)
 
     # Calculate the minimum and maximum possible gene values for the child genome,
     # considering the range factor.
-    min_genes = np.minimum(genome1, genome2) - gene_ranges * range_factor
-    max_genes = np.maximum(genome1, genome2) + gene_ranges * range_factor
+    min_genes = np.minimum(genes1, genes2) - gene_ranges * range_factor
+    max_genes = np.maximum(genes1, genes2) + gene_ranges * range_factor
 
     # Generate random child genes using uniform distribution within the calculated ranges.
-    child_genes = np.random.uniform(min_genes, max_genes, size=len(genome1))
+    child_genes = np.random.uniform(min_genes, max_genes, size=len(genes1))
 
     # Determine the range of gene values for the child genome.
     min_genes, max_genes = np.min(child_genes), np.max(child_genes)
@@ -228,13 +285,16 @@ def one_point(genome1: Genome, genome2: Genome, *,
     # Combine into a single genome
     child_genes = np.concatenate((first, second))
 
+    if is_real_valued_array(child_genes):
+        return Genome(genes=child_genes, gene_range=combine_gene_range(genome1, genome2))
+
     return Genome(genes=child_genes, gene_set=combine_gene_set(genome1, genome2))
 
 
 @kwargs_proxy
 def two_point(genome1: Genome, genome2: Genome, *,
-              crossover_point1: Optional[int],
-              crossover_point2: Optional[int]) -> Genome:
+              crossover_point1: Optional[int] = None,
+              crossover_point2: Optional[int] = None) -> Genome:
     """
     Perform two-point crossover between two genomes.
 
@@ -265,7 +325,8 @@ def two_point(genome1: Genome, genome2: Genome, *,
         check_crossover_point(crossover_point1, genome1)
     else:
         # Choose a random crossover point if one is not provided
-        crossover_point1 = _rng.integers(1, 2 * genome1.gene_length // 3)
+        upper_bound = crossover_point2 or (2 * genome1.gene_length // 3)
+        crossover_point1 = _rng.integers(1, upper_bound)
 
     if crossover_point2 is not None:
         # Bounds check
@@ -287,6 +348,9 @@ def two_point(genome1: Genome, genome2: Genome, *,
 
     # Combine into a single genome
     child_genes = np.concatenate((first, second, third))
+
+    if is_real_valued_array(child_genes):
+        return Genome(genes=child_genes, gene_range=combine_gene_range(genome1, genome2))
 
     return Genome(genes=child_genes, gene_set=combine_gene_set(genome1, genome2))
 
@@ -321,10 +385,13 @@ def uniform(genome1: Genome, genome2: Genome) -> Genome:
     # Combine genes based on the mask, selecting genes from either genome1 or genome2.
     child_genes = np.where(mask, genome1.genes, genome2.genes)
 
+    if is_real_valued_array(child_genes):
+        return Genome(genes=child_genes, gene_range=combine_gene_range(genome1, genome2))
+
     return Genome(genes=child_genes, gene_set=genome1.gene_set)
 
 
-# Dictionary of crossover methods and their corresponding functions
+# Dictionary mapping crossover method names to their corresponding functions
 methods = {
     'arithmetic': arithmetic,
     'blend': blend,
