@@ -3,7 +3,7 @@ from typing import Optional, Iterable, Sequence
 from numpy.typing import NDArray
 import numpy as np
 
-from genetic_algorithm.utils import LazyLoader
+from genetic_algorithm.utils import LazyLoader, is_int, is_real_valued_array
 
 
 class Genome:
@@ -42,7 +42,7 @@ class Genome:
             gene_range (Optional[tuple[float, float]]): The range of real-valued gene values (optional).
             random_state (Optional[int]): Seed for the random number generator (optional).
         """
-        if not isinstance(gene_length, int):
+        if not is_int(gene_length):
             raise TypeError(
                 f'`gene_length` must be an integer, found type `{type(gene_length)=}`.'
             )
@@ -77,7 +77,7 @@ class Genome:
             gene_range (Optional[tuple[float, float]]): The range of real-valued gene values (optional).
         """
         # If the gene values are not real values
-        if not np.issubdtype(self.genes.dtype, np.floating):
+        if not is_real_valued_array(self.genes):
             # Define a gene_set for discrete values
             if gene_range is None:
                 if gene_set:
@@ -302,3 +302,25 @@ def combine_gene_set(genome1: Genome, genome2: Genome) -> frozenset:
         frozenset: A frozenset containing the combined gene set from both genomes.
     """
     return genome1._gene_set.union(genome2._gene_set)
+
+
+def combine_gene_range(genome1: Genome, genome2: Genome) -> tuple:
+    """
+    Combine the gene ranges of two genomes.
+
+    This function computes the combined gene range by taking the minimum of the
+    lower bounds and the maximum of the upper bounds from the gene ranges of
+    the given genomes.
+
+    Parameters:
+        genome1 (Genome): The first genome.
+        genome2 (Genome): The second genome.
+
+    Returns:
+        tuple: A tuple containing the combined gene range, where the first element
+               is the lower bound and the second element is the upper bound.
+    """
+    return (
+        min(genome1.gene_range[0], genome2.gene_range[0]),
+        max(genome1.gene_range[1], genome2.gene_range[1]),
+    )
