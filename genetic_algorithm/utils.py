@@ -2,6 +2,15 @@ from typing import Callable
 import functools
 import importlib
 import inspect
+import numpy as np
+
+
+def is_int(value):
+    return isinstance(value, (int, np.integer))
+
+
+def is_real_valued_array(array):
+    return np.issubdtype(array.dtype, np.floating)
 
 
 def kwargs_proxy(func: Callable) -> Callable:
