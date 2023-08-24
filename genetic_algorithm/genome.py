@@ -193,7 +193,7 @@ class Genome:
             return self._crossover_methods[method](self, other, **kwargs)
         except KeyError:
             raise ValueError(
-                f'`{method=}` is not a recognized crossover function'
+                f'`{method=}` is not a known crossover method'
             )
 
     def mutate(self, mutation_rate: float = 0.01, *,
@@ -304,7 +304,7 @@ def combine_gene_set(genome1: Genome, genome2: Genome) -> frozenset:
     return genome1._gene_set.union(genome2._gene_set)
 
 
-def combine_gene_range(genome1: Genome, genome2: Genome) -> tuple:
+def combine_gene_range(genome1: Genome, genome2: Genome) -> tuple[float, float]:
     """
     Combine the gene ranges of two genomes.
 
